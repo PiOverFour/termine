@@ -56,8 +56,8 @@ getch = _find_getch()
 
 class Cell(object):
 
-    COLORS = {
-        0: ' ',
+    TEXTS = {
+        0: 'o',
         1: '\033[1m\033[34m1\033[0m',
         2: '\033[1m\033[32m2\033[0m',
         3: '\033[1m\033[31m3\033[0m',
@@ -73,37 +73,36 @@ class Cell(object):
         self.coords = coords
         self.is_mine = is_mine
         self.is_flagged = False
+        self.is_opened = False
 
     def compute_adjacent(self):
+        self.adjacent = 0
         if self.is_mine:
             return
-        self.adjacent = 0
-        print(self.coords)
+        # print(self.coords)
         for dx in range(-1, 2):
             for dy in range(-1, 2):
                 # print(grid[x+self.coords[0]][y+self.coords[1]].is_mine)
                 # try:
                 x = dx + self.coords[0]
                 y = dy + self.coords[1]
-                if x < 0 or y < 0 or x >= width or y >= width:
+                if x < 0 or y < 0 or x >= width or y >= height:
                     continue
                 if grid[x][y].is_mine:
                     self.adjacent += 1
-                print(x, y, grid[x][y].is_mine)
+                # print(x, y, grid[x][y].is_mine)
                 # except:
                 #     continue
         # self.adjacent = random.randint(0, 8)
 
     def get_output(self):
         output = ' '
-        if self.is_mine:
-            output = 'X'
-        else:
-            output = self.COLORS[self.adjacent]
+        if self.is_opened:
+            if self.is_mine:
+                output = 'X'
+            else:
+                output = self.TEXTS[self.adjacent]
         return output
-
-    def open(self):
-        pass
 
 
 def generate_grid(width, height, mines):
@@ -124,9 +123,53 @@ def compute_grid(grid):
             grid[x][y].compute_adjacent()
 
 
+def open_cell(coords=None, visited_cells=None, level=0):
+    # print(level, coords)
+    if coords is None:  # values for first level of recursion
+        coords = current_coords
+        visited_cells = [coords]
+        if grid[coords[0]][coords[1]].is_mine:
+            return -1
+
+    # avoid border
+    x, y = coords
+    if x < 0 or y < 0 or x >= width or y >= height:
+        return visited_cells
+    else:
+        cell = grid[coords[0]][coords[1]]
+
+    if cell.is_opened:
+        return visited_cells
+    else:
+        cell.is_opened = True
+    if cell.adjacent != 0:
+        return visited_cells
+    visited_cells.append(coords)
+    print('\n', sorted(visited_cells))
+    # check all neighbouring cells which have not yet been visited
+    # for dx, dy in ((0, -1),
+    #                (0, 1),
+    #                (-1, 0),
+    #                (1, 0)):
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            if dx == dy == 0:
+                continue
+            x = coords[0] + dx
+            y = coords[1] + dy
+            if [x, y] not in visited_cells:
+                result = open_cell([x, y], visited_cells, level=level+1)
+                if result == -1:  # found mine
+                    return -1
+                visited_cells = result
+    return visited_cells
+
+
 def step(next_move):
     if next_move in ('q', u'\003'):
         sys.exit()
+    elif next_move == ' ':
+        return open_cell()
     elif (next_move) == 'A' and current_coords[1] > 0:
         # up
         current_coords[1] -= 1
@@ -207,4 +250,6 @@ if __name__ == '__main__':
         print_grid(grid)
         # next_move = raw_input('\n    Please enter the next move: ')
         next_move = getch()
-        step(next_move)
+        if step(next_move) == -1:
+            game_ended = True
+    print("Game over")
