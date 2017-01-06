@@ -93,10 +93,15 @@ class Cell(object):
         output = ' '
         if self.is_opened:
             if self.is_mine:
-                output = 'X'
+                output = u'\u2737'
             else:
                 output = self.TEXTS[self.adjacent]
+        elif self.is_flagged:
+            output = u'\u2691'
         return output
+
+    def toggle_flag(self):
+        self.is_flagged = not self.is_flagged
 
 
 def generate_grid(width, height, mines):
@@ -117,12 +122,44 @@ def compute_grid(grid):
             grid[x][y].compute_adjacent()
 
 
+def flag():
+    coords = current_coords
+    cell = grid[coords[0]][coords[1]]
+    if not cell.is_opened:
+        cell.toggle_flag()
+
+
+def evaluate_flags(coords):
+    flags = 0
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            if dx == dy == 0:
+                continue
+            x = coords[0] + dx
+            y = coords[1] + dy
+            if x < 0 or y < 0 or x >= width or y >= height:
+                continue
+            if grid[x][y].is_flagged:
+                flags += 1
+    return flags
+
+
 def open_cell(coords=None, visited_cells=None):
+    do_flagging = False
     if coords is None:  # values for first level of recursion
         coords = current_coords
         visited_cells = [coords]
-        if grid[coords[0]][coords[1]].is_mine:
+        cell = grid[coords[0]][coords[1]]
+        if cell.is_flagged:
+            return
+        if cell.is_mine:
             return -1
+
+        flags = evaluate_flags(coords)
+        do_flagging = (
+            cell.adjacent == flags
+            and cell.is_opened
+        )
 
     # avoid border
     x, y = coords
@@ -131,17 +168,25 @@ def open_cell(coords=None, visited_cells=None):
     else:
         cell = grid[coords[0]][coords[1]]
 
-    if cell.is_opened:
-        return visited_cells
+    if do_flagging:
+        if cell.is_flagged or cell.is_mine:
+            return visited_cells
     else:
-        cell.is_opened = True
-    if cell.adjacent != 0:
+        if cell.is_opened or cell.is_flagged:
+            return visited_cells
+        else:
+            cell.is_opened = True
+            cell.is_flagged = False
+
+    if cell.adjacent != 0 and not do_flagging:
         return visited_cells
+
     visited_cells.append(coords)
+
     # check all neighbouring cells which have not yet been visited
     for dx in range(-1, 2):
         for dy in range(-1, 2):
-            if dx == dy == 0:
+            if dx == dy == 0:  # avoid current cell
                 continue
             x = coords[0] + dx
             y = coords[1] + dy
@@ -154,10 +199,12 @@ def open_cell(coords=None, visited_cells=None):
 
 
 def step(next_move):
-    if next_move in ('q', u'\003'):
+    if next_move in ('Q', 'q', u'\003'):
         sys.exit()
     elif next_move == ' ':
         return open_cell()
+    elif next_move in ('F', 'f'):
+        flag()
     elif (next_move) == 'A' and current_coords[1] > 0:
         # up
         current_coords[1] -= 1
@@ -208,6 +255,14 @@ def print_grid(grid):
     print('    ╚═══' + '╧═══' * (width-1) + '╝')
 
 
+def end_game():
+    for x in range(width):
+        for y in range(height):
+            cell = grid[x][y]
+            if cell.is_mine:
+                cell.is_opened = True
+
+
 if __name__ == '__main__':
     ROWS = 'abcdefghjklmnopqrstuvwxyz'
 
@@ -249,6 +304,8 @@ if __name__ == '__main__':
             game_ended = "lose"
         if evaluate_victory():
             game_ended = 'win'
+    end_game()
+    print_grid(grid)
     if game_ended == "lose":
         print("Game over. Time:", time.time() - start_time)
     if game_ended == "win":
