@@ -21,6 +21,7 @@ from __future__ import print_function
 import argparse
 import re
 import sys
+import os
 import random
 import time
 
@@ -273,11 +274,48 @@ def end_game():
                 cell.is_opened = True
 
 
+def save_highscores(date, game_time, size, mines):
+    home = os.environ['HOME']
+    if '.termine' not in os.listdir(home):
+        os.makedirs(os.path.join(home, '.termine'))
+    filepath = os.path.join(home, '.termine', 'highscores')
+    with open(filepath, 'a') as f:
+        f.write("{} {} {} {}\n".format(date, game_time, size, mines))
+
+
+def print_highscores():
+    home = os.environ['HOME']
+    if (
+            '.termine' not in os.listdir(home)
+            and 'highscores' not in os.path.join(home, '.termine')
+    ):
+        print('No highscores yet.')
+    else:
+        filepath = os.path.join(home, '.termine', 'highscores')
+        with open(filepath, 'r') as f:
+            highs = list(f)  #.readlines()
+        # header
+        print("\n{:<26} {:<8} {:<8} {:<8}\n".format("Date",
+                                                 "Score",
+                                                 "Size",
+                                                 "Mines"))
+        # scores
+        highs = [line.split(' ') for line in highs]
+        for line in sorted(highs, key=lambda l: (l[2], l[3], l[1])):
+            # print(line)
+            date, game_time, size, mines = line
+            date = time.strftime("%a %x %X", time.localtime(float(date)))
+            print("{:<26} {:<8.2f} {:<8} {}".format(date, float(game_time), size, mines), end='')
+        sys.exit()
+
+
 if __name__ == '__main__':
     ROWS = 'abcdefghjklmnopqrstuvwxyz'
 
     parser = argparse.ArgumentParser(
         description='A terminal minesweeper clone')
+    parser.add_argument('-hs', '--highscores', action='store_true',
+                        help='Print highscores')
     parser.add_argument('-gs', '--gridsize', metavar='WxH',
                         type=str, default='8x8',
                         help='Size of the grid')
@@ -286,6 +324,8 @@ if __name__ == '__main__':
                         help='Number of mines')
     args = parser.parse_args()
 
+    if args.highscores:
+        print_highscores()
     mines = args.mines
     match = re.match('([0-9]+)x([0-9]+)', args.gridsize)
     try:
@@ -324,7 +364,9 @@ if __name__ == '__main__':
 
     end_game()
     print_grid(grid)
+    game_time = time.time() - start_time
     if game_ended == "lose":
-        print("Game over. Time:", time.time() - start_time)
+        print("Game over. Time:", "{:.2f}".format(game_time))
     if game_ended == "win":
-        print("You win! Time:", time.time() - start_time)
+        print("You win! Time:", "{:.2f}".format(game_time))
+        save_highscores(start_time, game_time, args.gridsize, mines)
