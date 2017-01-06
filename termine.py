@@ -22,6 +22,7 @@ import argparse
 import re
 import sys
 import random
+import time
 
 
 # from http://stackoverflow.com/a/21659588
@@ -79,21 +80,14 @@ class Cell(object):
         self.adjacent = 0
         if self.is_mine:
             return
-        # print(self.coords)
         for dx in range(-1, 2):
             for dy in range(-1, 2):
-                # print(grid[x+self.coords[0]][y+self.coords[1]].is_mine)
-                # try:
                 x = dx + self.coords[0]
                 y = dy + self.coords[1]
                 if x < 0 or y < 0 or x >= width or y >= height:
                     continue
                 if grid[x][y].is_mine:
                     self.adjacent += 1
-                # print(x, y, grid[x][y].is_mine)
-                # except:
-                #     continue
-        # self.adjacent = random.randint(0, 8)
 
     def get_output(self):
         output = ' '
@@ -123,8 +117,7 @@ def compute_grid(grid):
             grid[x][y].compute_adjacent()
 
 
-def open_cell(coords=None, visited_cells=None, level=0):
-    # print(level, coords)
+def open_cell(coords=None, visited_cells=None):
     if coords is None:  # values for first level of recursion
         coords = current_coords
         visited_cells = [coords]
@@ -145,12 +138,7 @@ def open_cell(coords=None, visited_cells=None, level=0):
     if cell.adjacent != 0:
         return visited_cells
     visited_cells.append(coords)
-    print('\n', sorted(visited_cells))
     # check all neighbouring cells which have not yet been visited
-    # for dx, dy in ((0, -1),
-    #                (0, 1),
-    #                (-1, 0),
-    #                (1, 0)):
     for dx in range(-1, 2):
         for dy in range(-1, 2):
             if dx == dy == 0:
@@ -158,7 +146,7 @@ def open_cell(coords=None, visited_cells=None, level=0):
             x = coords[0] + dx
             y = coords[1] + dy
             if [x, y] not in visited_cells:
-                result = open_cell([x, y], visited_cells, level=level+1)
+                result = open_cell([x, y], visited_cells)
                 if result == -1:  # found mine
                     return -1
                 visited_cells = result
@@ -182,7 +170,16 @@ def step(next_move):
     elif (next_move) == 'D' and current_coords[0] > 0:
         # left
         current_coords[0] -= 1
-    # print(next_move)
+
+
+def evaluate_victory():
+    opened_mines = 0
+    for x in range(width):
+        for y in range(height):
+            if grid[x][y].is_opened:
+                opened_mines += 1
+    if opened_mines == width * height - mines:
+        return True
 
 
 def print_grid(grid):
@@ -208,7 +205,6 @@ def print_grid(grid):
             # is_mine = 'X' if grid[x][y].is_mine else ' '
             print(output, end='')
         print('║')
-        # print('')
     print('    ╚═══' + '╧═══' * (width-1) + '╝')
 
 
@@ -233,7 +229,6 @@ if __name__ == '__main__':
         print('    Please specify a grid size of form WidthxHeight')
         sys.exit(1)
 
-    # print(width, height, type(height))
     if mines > width * height:
         print('    Error: Number of mines too high')
         sys.exit(1)
@@ -245,11 +240,16 @@ if __name__ == '__main__':
     compute_grid(grid)
     current_coords = [0, 0]
 
+    start_time = time.time()
     game_ended = False
     while not game_ended:
         print_grid(grid)
-        # next_move = raw_input('\n    Please enter the next move: ')
         next_move = getch()
         if step(next_move) == -1:
-            game_ended = True
-    print("Game over")
+            game_ended = "lose"
+        if evaluate_victory():
+            game_ended = 'win'
+    if game_ended == "lose":
+        print("Game over. Time:", time.time() - start_time)
+    if game_ended == "win":
+        print("You win! Time:", time.time() - start_time)
