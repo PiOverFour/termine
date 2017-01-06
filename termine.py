@@ -66,7 +66,8 @@ class Cell(object):
         5: '\033[91m5\033[0m',
         6: '\033[34m6\033[0m',
         7: '7',
-        8: '\033[1m\033[97m8\033[0m'
+        8: '\033[1m\033[97m8\033[0m',
+        'F': u'\033[1m\033[31m\u2691\033[0m',
     }
 
     def __init__(self, coords, grid, is_mine):
@@ -97,7 +98,7 @@ class Cell(object):
             else:
                 output = self.TEXTS[self.adjacent]
         elif self.is_flagged:
-            output = u'\u2691'
+            output = self.TEXTS['F']
         return output
 
     def toggle_flag(self):
@@ -231,12 +232,16 @@ def evaluate_cell_attribute(attr):
             if getattr(grid[x][y], attr):
                 attr_value += 1
     return attr_value
-    print(attr, attr_value)
+
+
+def clear_screen():
+    sys.stdout.write(u"\u001b[" + str(5 + height*2) + "A")  # Move up
+    print(u"\u001b[1000D")
 
 
 def print_grid(grid):
     # header
-    print('   ', end='')
+    print('\n   ', end='')
     # draw horizontal coordinates
     for x in range(width):
         print('% 4i' % (x+1), end='')
@@ -302,14 +307,21 @@ if __name__ == '__main__':
 
     start_time = time.time()
     game_ended = False
+    first_move = True
     while not game_ended:
+        if not first_move:
+            clear_screen()
         print_grid(grid)
-        print('Remaining:', mines - evaluate_cell_attribute('is_flagged'))
+        print('Remaining:',
+              mines - evaluate_cell_attribute('is_flagged'),
+              ' ' * 10)
         next_move = getch()
         if step(next_move) == -1:
             game_ended = "lose"
         if evaluate_cell_attribute('is_opened') == width * height - mines:
             game_ended = 'win'
+        first_move = False
+
     end_game()
     print_grid(grid)
     if game_ended == "lose":
