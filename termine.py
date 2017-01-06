@@ -169,14 +169,19 @@ def open_cell(coords=None, visited_cells=None):
         cell = grid[coords[0]][coords[1]]
 
     if do_flagging:
-        if cell.is_flagged or cell.is_mine:
+        if cell.is_flagged:
             return visited_cells
+        elif cell.is_mine and not cell.is_flagged:
+            return -1
     else:
         if cell.is_opened or cell.is_flagged:
             return visited_cells
         else:
-            cell.is_opened = True
-            cell.is_flagged = False
+            if cell.is_mine:
+                return -1
+            else:
+                cell.is_opened = True
+                cell.is_flagged = False
 
     if cell.adjacent != 0 and not do_flagging:
         return visited_cells
@@ -219,14 +224,14 @@ def step(next_move):
         current_coords[0] -= 1
 
 
-def evaluate_victory():
-    opened_mines = 0
+def evaluate_cell_attribute(attr):
+    attr_value = 0
     for x in range(width):
         for y in range(height):
-            if grid[x][y].is_opened:
-                opened_mines += 1
-    if opened_mines == width * height - mines:
-        return True
+            if getattr(grid[x][y], attr):
+                attr_value += 1
+    return attr_value
+    print(attr, attr_value)
 
 
 def print_grid(grid):
@@ -299,10 +304,11 @@ if __name__ == '__main__':
     game_ended = False
     while not game_ended:
         print_grid(grid)
+        print('Remaining:', mines - evaluate_cell_attribute('is_flagged'))
         next_move = getch()
         if step(next_move) == -1:
             game_ended = "lose"
-        if evaluate_victory():
+        if evaluate_cell_attribute('is_opened') == width * height - mines:
             game_ended = 'win'
     end_game()
     print_grid(grid)
