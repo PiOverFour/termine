@@ -313,7 +313,13 @@ if __name__ == '__main__':
     ROWS = 'abcdefghjklmnopqrstuvwxyz'
 
     parser = argparse.ArgumentParser(
-        description='A terminal minesweeper clone')
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='A terminal minesweeper clone.\n'
+        '  Controls:\n'
+        '    Spacebar: open a cell\n'
+        '    F:        flag\n'
+        '    Q or ^C:  quit'
+        )
     parser.add_argument('-hs', '--highscores', action='store_true',
                         help='Print highscores')
     parser.add_argument('-gs', '--gridsize', metavar='WxH',
