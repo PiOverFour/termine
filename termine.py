@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # termine, a terminal minesweeper clone
-# Copyright (C) 2017  Damien Picard dam.pic AT free.fr
+# Copyright (C) 2017-2019  Damien Picard dam.pic AT free.fr
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -206,6 +206,9 @@ def open_cell(coords=None, visited_cells=None):
 
 
 def step(next_move):
+    global start_time
+    if next_move in ('F', 'f', ' ') and not start_time:
+        start_time = time.time()
     if next_move in ('Q', 'q', u'\003'):
         sys.exit()
     elif next_move == ' ':
@@ -351,7 +354,7 @@ if __name__ == '__main__':
     compute_grid(grid)
     current_coords = [0, 0]
 
-    start_time = time.time()
+    start_time = 0
     game_ended = False
     first_move = True
     while not game_ended:
