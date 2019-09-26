@@ -24,6 +24,7 @@ import sys
 import os
 import random
 import time
+from itertools import product
 
 
 # from http://stackoverflow.com/a/21659588
@@ -124,6 +125,15 @@ def compute_grid(grid):
             grid[x][y].compute_adjacent()
 
 
+def move_mine_to_first_empty_cell(cell):
+    for (x, y) in product(range(width), range(height)):
+        if not grid[x][y].is_mine:
+            grid[x][y].is_mine = True
+            break
+    cell.is_mine = False
+    compute_grid(grid)
+
+
 def flag():
     coords = current_coords
     cell = grid[coords[0]][coords[1]]
@@ -209,9 +219,17 @@ def step(next_move):
     global start_time
     if next_move in ('F', 'f', ' ') and not start_time:
         start_time = time.time()
+
     if next_move in ('Q', 'q', u'\003'):
         sys.exit()
     elif next_move == ' ':
+        cell = grid[current_coords[0]][current_coords[1]]
+        global first_cell_opened
+        if not first_cell_opened:
+            first_cell_opened = True
+            if cell.is_mine:
+                cell = grid[current_coords[0]][current_coords[1]]
+                move_mine_to_first_empty_cell(cell)
         return open_cell()
     elif next_move in ('F', 'f'):
         flag()
@@ -343,7 +361,7 @@ if __name__ == '__main__':
         print('    Please specify a grid size of form WidthxHeight')
         sys.exit(1)
 
-    if mines > width * height:
+    if mines >= width * height:
         print('    Error: Number of mines too high')
         sys.exit(1)
     if mines < 1:
@@ -357,6 +375,7 @@ if __name__ == '__main__':
     start_time = 0
     game_ended = False
     first_move = True
+    first_cell_opened = False
     while not game_ended:
         if not first_move:
             clear_screen()
